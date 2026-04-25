@@ -141,12 +141,12 @@ client.on('messageCreate', async (message) => {
             'Show all registered aliases'
         ].join('\n'));
     }
-    if (message.content === 'accountdota') {
-        return message.reply([
-            '🔐 **Account Info**',
-            'ACCOUNT ID: zy9897707',
-            'PASSWORD: Shinta1945'
-        ].join('\n'));
+    if (message.content === 'account') {
+    return message.reply([
+        '🔐 **Account Info**',
+        `ACCOUNT ID: ${process.env.ACCOUNT_ID}`,
+        `PASSWORD: ${process.env.ACCOUNT_PASSWORD}`
+    ].join('\n'));
     }
     if (message.content === 'listaliases') {
         const aliases = loadAliases();
