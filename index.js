@@ -112,7 +112,9 @@ client.on('messageCreate', async (message) => {
             `K/D/A: ${lastMatch.kills}/${lastMatch.deaths}/${lastMatch.assists}`,
             `Result: ${result}`,
             `Duration: ${formattedDuration}`,
-            `Played: ${startTime.toLocaleString('id-ID')} (${timeAgo})`
+            `Played: ${startTime.toLocaleString('id-ID', {
+                    timeZone: 'Asia/Jakarta'
+                })} (${timeAgo})`
             ].join('\n'));
 
         } catch (error) {
