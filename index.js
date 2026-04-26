@@ -93,6 +93,8 @@ client.on('messageCreate', async (message) => {
             const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
             const hours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
             const minutes = Math.floor((diffMs / (1000 * 60)) % 60);
+            const gpm = lastMatch.gold_per_min || 'N/A';
+            const xpm = lastMatch.xp_per_min || 'N/A';
 
             let timeAgo = '';
             if (days > 0) timeAgo += `${days}d `;
@@ -111,6 +113,8 @@ client.on('messageCreate', async (message) => {
             `Hero: ${heroName}`,
             `K/D/A: ${lastMatch.kills}/${lastMatch.deaths}/${lastMatch.assists}`,
             `Result: ${result}`,
+            `GPM: ${gpm}`,
+            `XPM: ${xpm}`,
             `Duration: ${formattedDuration}`,
             `Played: ${startTime.toLocaleString('id-ID', {
                     timeZone: 'Asia/Jakarta'
