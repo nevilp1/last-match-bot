@@ -1,19 +1,50 @@
-require('dotenv').config();
-const axios = require('axios');
-const { Client, GatewayIntentBits } = require('discord.js');
 
-const fs = require('fs-extra');
+import { createClient } from '@supabase/supabase-js'
+import 'dotenv/config';
+import axios from 'axios';
+import { Client, GatewayIntentBits } from 'discord.js';
 
-const ALIAS_FILE = './aliases.json';
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
-function loadAliases() {
-  return fs.existsSync(ALIAS_FILE)
-    ? fs.readJsonSync(ALIAS_FILE)
-    : {};
+async function loadAliases(accountId) {
+  const { data } = await supabase
+    .from('aliases')
+    .select('alias')
+    .eq('account_id', accountId)
+    .single();
+
+  return data?.alias;
 }
 
-function saveAliases(data) {
-  fs.writeJsonSync(ALIAS_FILE, data, { spaces: 2 });
+async function saveAliases(discordId, accountId, alias) {
+  const { data, error } = await supabase
+    .from('aliases')
+    .upsert(
+      [{
+        discord_id: discordId,
+        account_id: accountId,
+        alias: alias.toLowerCase()
+      }],
+      {
+        onConflict: 'alias'
+      }
+    );
+
+  if (error) console.error(error);
+  return data;
+}
+
+async function getAccountIdByAlias(alias) {
+  const { data } = await supabase
+    .from('aliases')
+    .select('account_id')
+    .eq('alias', alias)
+    .single();
+
+  return data?.account_id;
 }
 
 const client = new Client({
@@ -40,17 +71,18 @@ client.on('messageCreate', async (message) => {
             return message.reply('Usage: register <alias> <account_id>');
         }
 
-        const aliases = loadAliases();
-        aliases[alias.toLowerCase()] = accountId;
-        saveAliases(aliases);
+        await saveAliases(message.author.id, accountId, alias);
 
         return message.reply(`Registered **${alias}** → ${accountId}`);
     }
     if (message.content.startsWith('lastmatch')) {
         const args = message.content.split(' ');
         const input = args[1];
-        const aliases = loadAliases();
-        const accountId = aliases[input?.toLowerCase()] || input;
+
+        let accountId = input;
+
+        const aliasLookup = await getAccountIdByAlias(input?.toLowerCase());
+        if (aliasLookup) accountId = aliasLookup;
 
         if (!accountId) {
             return message.reply('Usage: lastmatch <account_id>');
@@ -155,14 +187,16 @@ client.on('messageCreate', async (message) => {
     ].join('\n'));
     }
     if (message.content === 'listaliases') {
-        const aliases = loadAliases();
+        const { data, error } = await supabase
+            .from('aliases')
+            .select('alias, account_id');
 
-        if (Object.keys(aliases).length === 0) {
+        if (error || !data.length) {
             return message.reply('No aliases registered.');
         }
 
-        const aliasList = Object.entries(aliases)
-            .map(([alias, id]) => `${alias} → ${id}`)
+        const aliasList = data
+            .map(row => `${row.alias} → ${row.account_id}`)
             .join('\n');
 
         return message.reply([
