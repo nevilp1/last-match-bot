@@ -19,6 +19,7 @@ Show command list.
 Example:
 ```bash
 helpdota
+```
 
 ## Sensitive Information
 
