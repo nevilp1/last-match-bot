@@ -46,6 +46,14 @@ async function getAccountIdByAlias(alias) {
 
   return data?.account_id;
 }
+async function removeAlias(alias) {
+  const { error } = await supabase
+    .from('aliases')
+    .delete()
+    .eq('alias', alias.toLowerCase());
+
+  return error;
+}
 
 const client = new Client({
   intents: [
@@ -74,6 +82,23 @@ client.on('messageCreate', async (message) => {
         await saveAliases(message.author.id, accountId, alias);
 
         return message.reply(`Registered **${alias}** → ${accountId}`);
+    }
+    if (message.content.startsWith('remove')) {
+        const args = message.content.split(' ');
+        const alias = args[1];
+
+        if (!alias) {
+            return message.reply('Usage: remove <alias>');
+        }
+
+        const error = await removeAlias(alias);
+
+        if (error) {
+            console.error(error.message);
+            return message.reply('Failed to remove alias.');
+        }
+
+        return message.reply(`Removed alias **${alias}**`);
     }
     if (message.content.startsWith('lastmatch')) {
         const args = message.content.split(' ');
