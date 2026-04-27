@@ -192,7 +192,8 @@ client.on('messageCreate', async (message) => {
     if (message.content === 'listaliases') {
         const { data, error } = await supabase
             .from('aliases')
-            .select('alias, account_id');
+            .select('alias, account_id')
+            .order('alias', { ascending: true });
 
         if (error || !data.length) {
             return message.reply('No aliases registered.');
