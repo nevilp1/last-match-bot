@@ -154,8 +154,11 @@ client.on('messageCreate', async (message) => {
             ].join('\n'));
 
         } catch (error) {
-            console.error(error.message);
-            message.reply('Failed to fetch match info.');
+            if (error.response?.status === 404) {
+                return message.reply('Steam ID not found.');
+            }
+
+            return message.reply('Failed to fetch match info.');
         }
     }
     if (message.content === 'helpdota') {
