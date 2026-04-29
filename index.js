@@ -62,8 +62,9 @@ async function getMatchesForDailyTAWin(accountId) {
         );
 
         const matches = response.data;
+        const WIB_OFFSET = 7 * 60 * 60 * 1000;
 
-        const now = new Date();
+        const now = new Date(Date.now() + WIB_OFFSET);
         const today = now.getDay(); // 0=Sun, 1=Mon...
         const mondayIndex = today === 0 ? 6 : today - 1;
 
@@ -77,7 +78,7 @@ async function getMatchesForDailyTAWin(accountId) {
         endOfToday.setHours(23, 59, 59, 999);
 
         const filteredMatches = matches.filter(match => {
-            const matchDate = new Date(match.start_time * 1000);
+            const matchDate = new Date(match.start_time * 1000 + WIB_OFFSET);;
 
             // Current week only
             const inCurrentWeek =
@@ -107,10 +108,11 @@ async function getMatchesForDailyTAWin(accountId) {
 }
 
 function getDailyTAWin(matches) {
+    const WIB_OFFSET = 7 * 60 * 60 * 1000;
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const result = [];
     
-    const now = new Date();
+    const now = new Date(Date.now() + WIB_OFFSET);
     const today = now.getDay();
     const mondayIndex = today === 0 ? 6 : today - 1;
 
