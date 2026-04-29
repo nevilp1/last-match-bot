@@ -55,6 +55,97 @@ async function removeAlias(alias) {
   return error;
 }
 
+async function getMatchesForDailyTAWin(accountId) {
+    try {
+        const response = await axios.get(
+            `https://api.opendota.com/api/players/${accountId}/recentMatches`
+        );
+
+        const matches = response.data;
+
+        const now = new Date();
+        const today = now.getDay(); // 0=Sun, 1=Mon...
+        const mondayIndex = today === 0 ? 6 : today - 1;
+
+        // Start of this week
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - mondayIndex);
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        // End of today
+        const endOfToday = new Date(now);
+        endOfToday.setHours(23, 59, 59, 999);
+
+        const filteredMatches = matches.filter(match => {
+            const matchDate = new Date(match.start_time * 1000);
+
+            // Current week only
+            const inCurrentWeek =
+                matchDate >= startOfWeek &&
+                matchDate <= endOfToday;
+
+            // Ranked/MMR only
+            const isRanked = match.lobby_type === 7;
+
+            // Templar Assassin only
+            const isTA = match.hero_id === 46;
+
+            // Win only
+            const isWin =
+                (match.player_slot < 128 && match.radiant_win) ||
+                (match.player_slot >= 128 && !match.radiant_win);
+
+            return inCurrentWeek && isRanked && isTA && isWin;
+        });
+
+        return filteredMatches;
+
+    } catch (error) {
+        console.error('Error fetching matches:', error.message);
+        return [];
+    }
+}
+
+function getDailyTAWin(matches) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const result = [];
+    
+    const now = new Date();
+    const today = now.getDay();
+    const mondayIndex = today === 0 ? 6 : today - 1;
+
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - mondayIndex);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Precompute winning days
+    const winDays = new Set(
+        matches.map(match => {
+            const d = new Date(match.start_time * 1000);
+            return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        })
+    );
+
+    for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(startOfWeek);
+        dayDate.setDate(startOfWeek.getDate() + i);
+
+        if (i > mondayIndex) {
+            result.push('❓');
+        } else if (i === mondayIndex) {
+            result.push('❓');
+        } else {
+            const key = `${dayDate.getFullYear()}-${dayDate.getMonth()}-${dayDate.getDate()}`;
+            result.push(winDays.has(key) ? '✅' : '❌');
+        }
+    }
+
+    const dayLine = days.map(d => d.padEnd(5)).join('');
+    const resultLine = `${result[0]}   ${result[1]}   ${result[2]}   ${result[3]}  ${result[4]}   ${result[5]}   ${result[6]}`;
+
+    return `📅 **Daily Templar Assassin Win**\n\`\`\`\n${dayLine}\n${resultLine}\n\`\`\``;
+}
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -206,6 +297,58 @@ client.on('messageCreate', async (message) => {
             'listaliases',
             'Show all registered aliases'
         ].join('\n'));
+    }
+    if (message.content.startsWith('dailyta')) {
+        const args = message.content.split(' ');
+        
+        if (!args[1]) {
+            return message.reply('Usage: dailyta [alias/account_id]');
+        }
+
+        let accountId = args[1];
+
+        // Check alias first
+        const { data: aliasData, error } = await supabase
+            .from('aliases')
+            .select('account_id')
+            .eq('alias', accountId)
+            .single();
+
+        if (aliasData) {
+            accountId = aliasData.account_id;
+        }
+
+        // Fetch matches
+        const matches = await getMatchesForDailyTAWin(accountId);
+
+        if (!matches.length) {
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+            const now = new Date();
+            const today = now.getDay(); // 0=Sun, 1=Mon...
+            const mondayIndex = today === 0 ? 6 : today - 1;
+
+            const result = [];
+
+            for (let i = 0; i < 7; i++) {
+                if (i >= mondayIndex) {
+                    result.push('❓'); // today + future
+                } else {
+                    result.push('❌'); // past only
+                }
+            }
+
+            const dayLine = days.map(d => d.padEnd(5)).join('');
+            const resultLine = `${result[0]}   ${result[1]}   ${result[2]}   ${result[3]}  ${result[4]}   ${result[5]}   ${result[6]}`;
+
+            return message.reply(
+                `📅 **Daily Templar Assassin Win**\n\`\`\`\n${dayLine}\n${resultLine}\n\`\`\``
+            );
+        }
+
+        const tracker = getDailyTAWin(matches);
+
+        message.reply(tracker);
     }
     if (message.content === 'account') {
     return message.reply([
