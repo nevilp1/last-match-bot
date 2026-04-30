@@ -40,6 +40,7 @@ export const HEROES = {
     jakiro: { id: 64, name: 'Jakiro' },
     juggernaut: { id: 8, name: 'Juggernaut' },
     keeper: { id: 90, name: 'Keeper of the Light' },
+    kez: { id: 145, name: 'Kez' },
     kunkka: { id: 23, name: 'Kunkka' },
     legion: { id: 104, name: 'Legion Commander' },
     leshrac: { id: 52, name: 'Leshrac' },
@@ -116,4 +117,311 @@ export const HEROES = {
     witch_doctor: { id: 30, name: 'Witch Doctor' },
     wraith_king: { id: 42, name: 'Wraith King' },
     zeus: { id: 22, name: 'Zeus' }
+};
+
+export const HERO_ALIASES = {
+    abaddon: 'abaddon',
+    aba: 'abaddon',
+
+    alchemist: 'alchemist',
+    alch: 'alchemist',
+
+    axe: 'axe',
+
+    bane: 'bane',
+
+    batrider: 'batrider',
+    bat: 'batrider',
+
+    beastmaster: 'beastmaster',
+    bm: 'beastmaster',
+
+    bloodseeker: 'bloodseeker',
+    bs: 'bloodseeker',
+
+    bounty: 'bounty',
+    bh: 'bounty',
+
+    brewmaster: 'brew',
+    brew: 'brew',
+
+    bristleback: 'bristle',
+    bristle: 'bristle',
+    bb: 'bristle',
+
+    broodmother: 'brood',
+    brood: 'brood',
+
+    centaur: 'centaur',
+    cw: 'centaur',
+
+    chaos: 'chaos',
+    ck: 'chaos',
+
+    chen: 'chen',
+
+    clinkz: 'clinkz',
+
+    clockwerk: 'clock',
+    clock: 'clock',
+
+    crystal: 'crystal',
+    cm: 'crystal',
+
+    darkseer: 'dark_seer',
+    ds: 'dark_seer',
+
+    dawnbreaker: 'dawnbreaker',
+    dawn: 'dawnbreaker',
+
+    dazzle: 'dazzle',
+
+    deathprophet: 'death_prophet',
+    dp: 'death_prophet',
+
+    disruptor: 'disruptor',
+
+    doom: 'doom',
+
+    dragonknight: 'dragon_knight',
+    dk: 'dragon_knight',
+
+    drow: 'drow',
+
+    earthspirit: 'earth_spirit',
+    espirit: 'earth_spirit',
+
+    earthshaker: 'earthshaker',
+    es: 'earthshaker',
+
+    eldertitan: 'elder_titan',
+    et: 'elder_titan',
+
+    ember: 'ember',
+    ember_spirit: 'ember',
+
+    enchantress: 'enchantress',
+    ench: 'enchantress',
+
+    enigma: 'enigma',
+
+    facelessvoid: 'faceless_void',
+    fv: 'faceless_void',
+
+    grimstroke: 'grimstroke',
+    grim: 'grimstroke',
+
+    gyrocopter: 'gyrocopter',
+    gyro: 'gyrocopter',
+
+    hoodwink: 'hoodwink',
+
+    huskar: 'huskar',
+
+    invoker: 'invoker',
+    invo: 'invoker',
+
+    io: 'io',
+    wisp: 'io',
+
+    jakiro: 'jakiro',
+
+    juggernaut: 'juggernaut',
+    jug: 'juggernaut',
+    jugg: 'juggernaut',
+
+    keeper: 'keeper',
+    kotl: 'keeper',
+
+    kunkka: 'kunkka',
+
+    legion: 'legion',
+    lc: 'legion',
+
+    leshrac: 'leshrac',
+    lesh: 'leshrac',
+
+    lich: 'lich',
+
+    lifestealer: 'lifestealer',
+    ls: 'lifestealer',
+    naix: 'lifestealer',
+
+    lina: 'lina',
+
+    lion: 'lion',
+
+    lone_druid: 'lone_druid',
+    ld: 'lone_druid',
+
+    luna: 'luna',
+
+    lycan: 'lycan',
+
+    magnus: 'magnus',
+    mag: 'magnus',
+
+    mars: 'mars',
+
+    medusa: 'medusa',
+
+    meepo: 'meepo',
+
+    mirana: 'mirana',
+
+    monkeyking: 'monkey_king',
+    mk: 'monkey_king',
+
+    morphling: 'morphling',
+
+    naga: 'naga',
+    naga_siren: 'naga',
+
+    naturesprophet: 'natures_prophet',
+    np: 'natures_prophet',
+
+    necrophos: 'necrophos',
+    necro: 'necrophos',
+
+    nightstalker: 'night_stalker',
+    ns: 'night_stalker',
+
+    nyx: 'nyx',
+
+    ogre: 'ogre',
+    ogre_magi: 'ogre',
+
+    omniknight: 'omniknight',
+    omni: 'omniknight',
+
+    oracle: 'oracle',
+
+    pangolier: 'pangolier',
+    pango: 'pangolier',
+
+    phantomassassin: 'phantom_assassin',
+    pa: 'phantom_assassin',
+
+    phantumlancer: 'phantom_lancer',
+    pl: 'phantom_lancer',
+
+    phoenix: 'phoenix',
+
+    primalbeast: 'primal_beast',
+    primal: 'primal_beast',
+
+    puck: 'puck',
+
+    pudge: 'pudge',
+
+    pugna: 'pugna',
+
+    queenofpain: 'queen_of_pain',
+    qop: 'queen_of_pain',
+
+    razor: 'razor',
+
+    riki: 'riki',
+
+    rubick: 'rubick',
+
+    sandking: 'sand_king',
+    sk: 'sand_king',
+
+    shadowdemon: 'shadow_demon',
+    sd: 'shadow_demon',
+
+    shadowfiend: 'shadow_fiend',
+    sf: 'shadow_fiend',
+
+    shadowshaman: 'shadow_shaman',
+    shaman: 'shadow_shaman',
+
+    silencer: 'silencer',
+
+    skywrath: 'skywrath',
+    sky: 'skywrath',
+
+    slardar: 'slardar',
+
+    slark: 'slark',
+
+    snapfire: 'snapfire',
+
+    sniper: 'sniper',
+
+    spectre: 'spectre',
+
+    spiritbreaker: 'spirit_breaker',
+    sb: 'spirit_breaker',
+
+    storm: 'storm',
+    storm_spirit: 'storm',
+
+    sven: 'sven',
+
+    techies: 'techies',
+
+    templarassassin: 'templar_assassin',
+    ta: 'templar_assassin',
+
+    terrorblade: 'terrorblade',
+    tb: 'terrorblade',
+
+    tidehunter: 'tidehunter',
+    tide: 'tidehunter',
+
+    timbersaw: 'timber',
+    timber: 'timber',
+
+    tinker: 'tinker',
+
+    tiny: 'tiny',
+
+    treant: 'treant',
+    treant_protector: 'treant',
+
+    troll: 'troll',
+    troll_warlord: 'troll',
+
+    tusk: 'tusk',
+
+    underlord: 'underlord',
+
+    undying: 'undying',
+
+    ursa: 'ursa',
+
+    vengeful: 'vengeful',
+    vs: 'vengeful',
+
+    venomancer: 'venomancer',
+    veno: 'venomancer',
+
+    viper: 'viper',
+
+    visage: 'visage',
+
+    voidspirit: 'void_spirit',
+    void_spirit: 'void_spirit',
+
+    warlock: 'warlock',
+
+    weaver: 'weaver',
+
+    windranger: 'windranger',
+    wr: 'windranger',
+
+    winterwyvern: 'winter_wyvern',
+    ww: 'winter_wyvern',
+
+    witchdoctor: 'witch_doctor',
+    wd: 'witch_doctor',
+
+    wraithking: 'wraith_king',
+    wk: 'wraith_king',
+
+    zeus: 'zeus',
+
+    kez: 'kez'
 };
