@@ -1,5 +1,6 @@
 import { HEROES, HERO_ALIASES } from './heroes.js';
 import axios from 'axios';
+import { supabase } from './connection.js'
 
 export function resolveHero(input) {
     const key = input.toLowerCase();

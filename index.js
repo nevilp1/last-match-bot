@@ -1,15 +1,11 @@
-
 import { createClient } from '@supabase/supabase-js'
 import 'dotenv/config';
 import axios from 'axios';
+import { supabase } from './connection.js'
 import { Client, GatewayIntentBits } from 'discord.js';
 import { HEROES } from './heroes.js';
 import { getAccountIdByAlias, getDailyHeroWin, getMatchesForDailyHeroWin, loadAliases, removeAlias, saveAliases, resolveHero } from './utils.js'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
 
 const client = new Client({
   intents: [
