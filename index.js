@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import 'dotenv/config';
 import axios from 'axios';
 import { Client, GatewayIntentBits } from 'discord.js';
+import { HEROES } from './heroes.js';
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -55,7 +56,7 @@ async function removeAlias(alias) {
   return error;
 }
 
-async function getMatchesForDailyTAWin(accountId) {
+async function getMatchesForDailyHeroWin(accountId, heroId) {
     try {
         const response = await axios.get(
             `https://api.opendota.com/api/players/${accountId}/recentMatches`
@@ -65,41 +66,32 @@ async function getMatchesForDailyTAWin(accountId) {
         const WIB_OFFSET = 7 * 60 * 60 * 1000;
 
         const now = new Date(Date.now() + WIB_OFFSET);
-        const today = now.getDay(); // 0=Sun, 1=Mon...
+        const today = now.getUTCDay();
         const mondayIndex = today === 0 ? 6 : today - 1;
 
-        // Start of this week
         const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - mondayIndex);
-        startOfWeek.setHours(0, 0, 0, 0);
+        startOfWeek.setUTCDate(now.getUTCDate() - mondayIndex);
+        startOfWeek.setUTCHours(0, 0, 0, 0);
 
-        // End of today
         const endOfToday = new Date(now);
-        endOfToday.setHours(23, 59, 59, 999);
+        endOfToday.setUTCHours(23, 59, 59, 999);
 
-        const filteredMatches = matches.filter(match => {
-            const matchDate = new Date(match.start_time * 1000 + WIB_OFFSET);;
+        return matches.filter(match => {
+            const matchDate = new Date(match.start_time * 1000 + WIB_OFFSET);
 
-            // Current week only
             const inCurrentWeek =
                 matchDate >= startOfWeek &&
                 matchDate <= endOfToday;
 
-            // Ranked/MMR only
             const isRanked = match.lobby_type === 7;
+            const isHero = match.hero_id === heroId;
 
-            // Templar Assassin only
-            const isTA = match.hero_id === 46;
-
-            // Win only
             const isWin =
                 (match.player_slot < 128 && match.radiant_win) ||
                 (match.player_slot >= 128 && !match.radiant_win);
 
-            return inCurrentWeek && isRanked && isTA && isWin;
+            return inCurrentWeek && isRanked && isHero && isWin;
         });
-
-        return filteredMatches;
 
     } catch (error) {
         console.error('Error fetching matches:', error.message);
@@ -107,45 +99,68 @@ async function getMatchesForDailyTAWin(accountId) {
     }
 }
 
-function getDailyTAWin(matches) {
+function getDailyHeroWin(matches, heroname) {
+    if (!matches.length) {
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+        const now = new Date();
+        const today = now.getDay(); // 0=Sun, 1=Mon...
+        const mondayIndex = today === 0 ? 6 : today - 1;
+
+        const result = [];
+
+        for (let i = 0; i < 7; i++) {
+            if (i >= mondayIndex) {
+                result.push('❓'); // today + future
+            } else {
+                result.push('❌'); // past only
+            }
+        }
+
+        const dayLine = days.map(d => d.padEnd(5)).join('');
+        const resultLine = `${result[0]}   ${result[1]}   ${result[2]}   ${result[3]}  ${result[4]}   ${result[5]}   ${result[6]}`;
+
+        return `📅 **Daily ${heroname} Win**\n\`\`\`\n${dayLine}\n${resultLine}\n\`\`\``;
+    }
     const WIB_OFFSET = 7 * 60 * 60 * 1000;
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const result = [];
     
     const now = new Date(Date.now() + WIB_OFFSET);
-    const today = now.getDay();
+    const today = now.getUTCDay(); // ✅ use UTC version
     const mondayIndex = today === 0 ? 6 : today - 1;
 
     const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - mondayIndex);
-    startOfWeek.setHours(0, 0, 0, 0);
+    startOfWeek.setUTCDate(now.getUTCDate() - mondayIndex);
+    startOfWeek.setUTCHours(0, 0, 0, 0);
 
-    // Precompute winning days
+    // Precompute winning days (WIB adjusted)
     const winDays = new Set(
         matches.map(match => {
-            const d = new Date(match.start_time * 1000);
-            return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+            const d = new Date(match.start_time * 1000 + WIB_OFFSET);
+            return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
         })
     );
 
     for (let i = 0; i < 7; i++) {
         const dayDate = new Date(startOfWeek);
-        dayDate.setDate(startOfWeek.getDate() + i);
+        dayDate.setUTCDate(startOfWeek.getUTCDate() + i);
 
         if (i > mondayIndex) {
-            result.push('❓');
+            result.push('❓'); // future
         } else if (i === mondayIndex) {
-            result.push('❓');
+            const key = `${dayDate.getUTCFullYear()}-${dayDate.getUTCMonth()}-${dayDate.getUTCDate()}`;
+            result.push(winDays.has(key) ? '✅' : '❓'); // today
         } else {
-            const key = `${dayDate.getFullYear()}-${dayDate.getMonth()}-${dayDate.getDate()}`;
-            result.push(winDays.has(key) ? '✅' : '❌');
+            const key = `${dayDate.getUTCFullYear()}-${dayDate.getUTCMonth()}-${dayDate.getUTCDate()}`;
+            result.push(winDays.has(key) ? '✅' : '❌'); // past
         }
     }
 
     const dayLine = days.map(d => d.padEnd(5)).join('');
     const resultLine = `${result[0]}   ${result[1]}   ${result[2]}   ${result[3]}  ${result[4]}   ${result[5]}   ${result[6]}`;
 
-    return `📅 **Daily Templar Assassin Win**\n\`\`\`\n${dayLine}\n${resultLine}\n\`\`\``;
+    return `📅 **Daily ${heroname} Win**\n\`\`\`\n${dayLine}\n${resultLine}\n\`\`\``;
 }
 
 const client = new Client({
@@ -320,35 +335,38 @@ client.on('messageCreate', async (message) => {
             accountId = aliasData.account_id;
         }
 
+        const hero = HEROES.templar_assassin;
         // Fetch matches
-        const matches = await getMatchesForDailyTAWin(accountId);
+        const matches = await getMatchesForDailyHeroWin(accountId, hero.id);
 
-        if (!matches.length) {
-            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const tracker = getDailyHeroWin(matches, hero.name);
 
-            const now = new Date();
-            const today = now.getDay(); // 0=Sun, 1=Mon...
-            const mondayIndex = today === 0 ? 6 : today - 1;
+        message.reply(tracker);
+    }
+    if (message.content.startsWith('dailyjug')) {
+        const args = message.content.split(' ');
 
-            const result = [];
-
-            for (let i = 0; i < 7; i++) {
-                if (i >= mondayIndex) {
-                    result.push('❓'); // today + future
-                } else {
-                    result.push('❌'); // past only
-                }
-            }
-
-            const dayLine = days.map(d => d.padEnd(5)).join('');
-            const resultLine = `${result[0]}   ${result[1]}   ${result[2]}   ${result[3]}  ${result[4]}   ${result[5]}   ${result[6]}`;
-
-            return message.reply(
-                `📅 **Daily Templar Assassin Win**\n\`\`\`\n${dayLine}\n${resultLine}\n\`\`\``
-            );
+        if (!args[1]) {
+            return message.reply('Usage: dailyjug [alias/account_id]');
         }
 
-        const tracker = getDailyTAWin(matches);
+        let accountId = args[1];
+
+        // alias lookup
+        const { data: aliasData } = await supabase
+            .from('aliases')
+            .select('account_id')
+            .eq('alias', accountId)
+            .single();
+
+        if (aliasData) {
+            accountId = aliasData.account_id;
+        }
+
+        const hero = HEROES.juggernaut;
+        const matches = await getMatchesForDailyHeroWin(accountId, hero.id);
+
+        const tracker = getDailyHeroWin(matches, hero.name);
 
         message.reply(tracker);
     }
