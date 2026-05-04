@@ -2,6 +2,27 @@ import { HEROES, HERO_ALIASES } from './heroes.js';
 import axios from 'axios';
 import { supabase } from './connection.js'
 
+let itemsCache = null;
+
+export async function getItems() {
+  if (!itemsCache) {
+    const res = await axios.get('https://api.opendota.com/api/constants/items');
+    itemsCache = res.data;
+  }
+  return itemsCache;
+}
+
+export function getItem(itemId, itemsData) {
+  if (!itemId || itemId === 0) return null;
+
+  const item = Object.values(itemsData).find(i => i.id === itemId);
+  return item || null;
+}
+
+export function getItemImage(item) {
+  return item ? `https://cdn.cloudflare.steamstatic.com${item.img}` : null;
+}
+
 export function resolveHero(input) {
     const key = input.toLowerCase();
 

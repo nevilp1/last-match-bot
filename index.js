@@ -1,22 +1,25 @@
-import { createClient } from '@supabase/supabase-js'
 import 'dotenv/config';
 import axios from 'axios';
 import { supabase } from './connection.js'
-import { Client, GatewayIntentBits } from 'discord.js';
-import { HEROES } from './heroes.js';
-import { getAccountIdByAlias, getDailyHeroWin, getMatchesForDailyHeroWin, loadAliases, removeAlias, saveAliases, resolveHero } from './utils.js'
+import { Client, GatewayIntentBits, EmbedBuilder } from 'discord.js';
+import {
+    getAccountIdByAlias, getDailyHeroWin, getMatchesForDailyHeroWin,
+    removeAlias, saveAliases, resolveHero,
+    getItemImage, getItems, getItem
+} from './utils.js'
+import { generateItemRow } from './canvas.js'
 
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-  ],
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+    ],
 });
 
 client.once('clientReady', () => {
-  console.log(`Logged in as ${client.user.tag}`);
+    console.log(`Logged in as ${client.user.tag}`);
 });
 
 client.on('messageCreate', async (message) => {
@@ -67,22 +70,28 @@ client.on('messageCreate', async (message) => {
 
         try {
             const profileRes = await axios.get(
-            `https://api.opendota.com/api/players/${accountId}`
+                `https://api.opendota.com/api/players/${accountId}`
             );
 
             const playerName =
-            profileRes.data.profile?.personaname || 'Unknown Player';
+                profileRes.data.profile?.personaname || 'Unknown Player';
             // Fetch recent match
             const matchRes = await axios.get(
-            `https://api.opendota.com/api/players/${accountId}/recentMatches`
+                `https://api.opendota.com/api/players/${accountId}/recentMatches`
             );
 
             const lastMatch = matchRes.data[0];
             if (!lastMatch) return message.reply('No recent match found.');
+            const detailRes = await axios.get(
+                `https://api.opendota.com/api/matches/${lastMatch.match_id}.`
+            );
+            console.log(accountId)
+            const detailMatch = detailRes.data.players.find(p => Number(p.account_id) === Number(accountId));
+
 
             // Fetch hero list
             const heroesRes = await axios.get(
-            'https://api.opendota.com/api/heroes'
+                'https://api.opendota.com/api/heroes'
             );
 
             const hero = heroesRes.data.find(h => h.id === lastMatch.hero_id);
@@ -91,8 +100,8 @@ client.on('messageCreate', async (message) => {
             // Win/Lose
             const result =
                 lastMatch.radiant_win === (lastMatch.player_slot < 128)
-                ? 'Win 🟢'
-                : 'Lose 🔴';
+                    ? 'Win 🟢'
+                    : 'Lose 🔴';
 
             // Time formatting
             const startTime = new Date(lastMatch.start_time * 1000);
@@ -112,29 +121,58 @@ client.on('messageCreate', async (message) => {
             const durationMinutes = Math.floor(lastMatch.duration / 60);
             const durationSeconds = lastMatch.duration % 60;
             const formattedDuration = `${durationMinutes}:${durationSeconds
-            .toString()
-            .padStart(2, '0')}`;
+                .toString()
+                .padStart(2, '0')}`;
 
-            message.reply([
-            '🎮 **Last Match Info**',
-            `Player: ${accountId}`,
-            `Nickname: ${playerName}`,
-            `Hero: ${heroName}`,
-            `K/D/A: ${lastMatch.kills}/${lastMatch.deaths}/${lastMatch.assists}`,
-            `Result: ${result}`,
-            `GPM: ${gpm}`,
-            `XPM: ${xpm}`,
-            `Duration: ${formattedDuration}`,
-            `Played: ${startTime.toLocaleString('id-ID', {
-                    timeZone: 'Asia/Jakarta'
-                })} (${timeAgo})`
-            ].join('\n'));
+            // try embed message
+            const itemIds = [
+                detailMatch.item_0,
+                detailMatch.item_1,
+                detailMatch.item_2,
+                detailMatch.item_3,
+                detailMatch.item_4,
+                detailMatch.item_5
+            ];
+
+            const itemsData = await getItems();
+            const items = itemIds.map(id => getItem(id, itemsData));
+            const itemImages = items.map(item => getItemImage(item)).filter(Boolean);
+
+            const buffer = await generateItemRow(itemImages);
+
+            const embed = new EmbedBuilder()
+                .setTitle('🎮 Last Match Info')
+                .addFields(
+                    { name: 'Player', value: `${accountId}`, inline: true },
+                    { name: 'Nickname', value: playerName, inline: true },
+                    { name: 'Hero', value: heroName, inline: true },
+
+                    { name: 'K/D/A', value: `${lastMatch.kills}/${lastMatch.deaths}/${lastMatch.assists}`, inline: true },
+                    { name: 'Result', value: result, inline: true },
+                    { name: 'Duration', value: formattedDuration, inline: true },
+
+                    { name: 'GPM', value: `${lastMatch.gold_per_min}`, inline: true },
+                    { name: 'XPM', value: `${lastMatch.xp_per_min}`, inline: true },
+                    { name: '\u200B', value: '\u200B', inline: true },
+
+                    { name: 'Played', value: `${startTime.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB (${timeAgo})` }
+                )
+                .setColor(result.includes('Win') ? 0x00ff00 : 0xff0000)
+                .setImage('attachment://items.png'); // 👈 IMPORTANT
+
+            await message.reply({
+                embeds: [embed],
+                files: [{
+                    attachment: buffer,
+                    name: 'items.png'
+                }]
+            });
 
         } catch (error) {
             if (error.response?.status === 404) {
                 return message.reply('Steam ID not found.');
             }
-
+            console.log(error);
             return message.reply('Failed to fetch match info.');
         }
     }
@@ -200,11 +238,13 @@ client.on('messageCreate', async (message) => {
         message.reply(tracker);
     }
     if (message.content === 'account') {
-    return message.reply([
-        '🔐 **Account Info**',
-        `ACCOUNT ID: ${process.env.ACCOUNT_ID}`,
-        `PASSWORD: ${process.env.ACCOUNT_PASSWORD}`
-    ].join('\n'));
+        return message.reply([
+            '🔐 **Account Info**',
+            // eslint-disable-next-line no-undef
+            `ACCOUNT ID: ${process.env.ACCOUNT_ID}`,
+            // eslint-disable-next-line no-undef
+            `PASSWORD: ${process.env.ACCOUNT_PASSWORD}`
+        ].join('\n'));
     }
     if (message.content === 'listaliases') {
         const { data, error } = await supabase
@@ -227,4 +267,5 @@ client.on('messageCreate', async (message) => {
     }
 });
 
+// eslint-disable-next-line no-undef
 client.login(process.env.TOKEN);
