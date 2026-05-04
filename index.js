@@ -85,7 +85,7 @@ client.on('messageCreate', async (message) => {
             const detailRes = await axios.get(
                 `https://api.opendota.com/api/matches/${lastMatch.match_id}.`
             );
-            console.log(accountId)
+
             const detailMatch = detailRes.data.players.find(p => Number(p.account_id) === Number(accountId));
 
 
