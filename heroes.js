@@ -1,6 +1,7 @@
 export const HEROES = {
     abaddon: { id: 102, name: 'Abaddon' },
     alchemist: { id: 73, name: 'Alchemist' },
+    anti_mage: { id: 1, name: 'Anti-Mage' },
     arc_warden: { id: 113, name: 'Arc Warden' },
     axe: { id: 2, name: 'Axe' },
     bane: { id: 3, name: 'Bane' },
@@ -124,6 +125,10 @@ export const HEROES = {
 export const HERO_ALIASES = {
     abaddon: 'abaddon',
     aba: 'abaddon',
+
+    antimage: 'anti_mage',
+    am: 'anti_mage',
+    magina: 'anti_mage',
 
     alchemist: 'alchemist',
     alch: 'alchemist',
