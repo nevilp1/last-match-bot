@@ -1,6 +1,7 @@
 export const HEROES = {
     abaddon: { id: 102, name: 'Abaddon' },
     alchemist: { id: 73, name: 'Alchemist' },
+    arc_warden: { id: 113, name: 'Arc Warden' },
     axe: { id: 2, name: 'Axe' },
     bane: { id: 3, name: 'Bane' },
     batrider: { id: 65, name: 'Batrider' },
@@ -17,6 +18,7 @@ export const HEROES = {
     clock: { id: 51, name: 'Clockwerk' },
     crystal: { id: 5, name: 'Crystal Maiden' },
     dark_seer: { id: 55, name: 'Dark Seer' },
+    dark_willow: { id: 119, name: 'Dark Willow' },
     dawnbreaker: { id: 135, name: 'Dawnbreaker' },
     dazzle: { id: 50, name: 'Dazzle' },
     death_prophet: { id: 43, name: 'Death Prophet' },
@@ -128,22 +130,33 @@ export const HERO_ALIASES = {
 
     axe: 'axe',
 
+    arc: 'arc_warden',
+    zet: 'arc_warden',
+    arcwarden: 'arc_warden',
+
     bane: 'bane',
+    atropos: 'bane',
+    elemental: 'bane',
+    baneelemental: 'bane',
 
     batrider: 'batrider',
     bat: 'batrider',
 
     beastmaster: 'beastmaster',
     bm: 'beastmaster',
+    rexxar: 'beastmaster',
 
     bloodseeker: 'bloodseeker',
     bs: 'bloodseeker',
+    strygwyr: 'bloodseeker',
 
     bounty: 'bounty',
     bh: 'bounty',
+    gondar: 'bounty',
 
     brewmaster: 'brew',
     brew: 'brew',
+    pandaren: 'brew',
 
     bristleback: 'bristle',
     bristle: 'bristle',
@@ -170,6 +183,9 @@ export const HERO_ALIASES = {
 
     darkseer: 'dark_seer',
     ds: 'dark_seer',
+    dw: 'dark_willow',
+    darkwillow: 'dark_willow',
+    willow: 'dark_willow',
 
     dawnbreaker: 'dawnbreaker',
     dawn: 'dawnbreaker',
@@ -185,8 +201,11 @@ export const HERO_ALIASES = {
 
     dragonknight: 'dragon_knight',
     dk: 'dragon_knight',
+    davion: 'dragon_knight',
 
     drow: 'drow',
+    trax: 'drow',
+    traxex: 'drow',
 
     earthspirit: 'earth_spirit',
     espirit: 'earth_spirit',
@@ -199,6 +218,7 @@ export const HERO_ALIASES = {
 
     ember: 'ember',
     ember_spirit: 'ember',
+    xin: 'ember',
 
     enchantress: 'enchantress',
     ench: 'enchantress',
@@ -220,6 +240,7 @@ export const HERO_ALIASES = {
 
     invoker: 'invoker',
     invo: 'invoker',
+    kael: 'invoker',
 
     io: 'io',
     wisp: 'io',
@@ -229,14 +250,17 @@ export const HERO_ALIASES = {
     juggernaut: 'juggernaut',
     jug: 'juggernaut',
     jugg: 'juggernaut',
+    yurnero: 'juggernaut',
 
     keeper: 'keeper',
     kotl: 'keeper',
+    ezalor: 'keeper',
 
     kunkka: 'kunkka',
 
     legion: 'legion',
     lc: 'legion',
+    tresdin: 'legion',
 
     leshrac: 'leshrac',
     lesh: 'leshrac',
@@ -255,6 +279,7 @@ export const HERO_ALIASES = {
     ld: 'lone_druid',
 
     luna: 'luna',
+    moonfang: 'luna',
 
     lycan: 'lycan',
 
@@ -268,6 +293,7 @@ export const HERO_ALIASES = {
     meepo: 'meepo',
 
     mirana: 'mirana',
+    potm: 'mirana',
 
     monkeyking: 'monkey_king',
     mk: 'monkey_king',
@@ -279,14 +305,19 @@ export const HERO_ALIASES = {
 
     naturesprophet: 'natures_prophet',
     np: 'natures_prophet',
+    furion: 'natures_prophet',
 
     necrophos: 'necrophos',
     necro: 'necrophos',
+    rotund: 'necrophos',
+    rotundjere: 'necrophos',
 
     nightstalker: 'night_stalker',
     ns: 'night_stalker',
+    balanar: 'night_stalker',
 
     nyx: 'nyx',
+    nerubian: 'nyx',
 
     ogre: 'ogre',
     ogre_magi: 'ogre',
@@ -301,8 +332,10 @@ export const HERO_ALIASES = {
 
     phantomassassin: 'phantom_assassin',
     pa: 'phantom_assassin',
+    mortred: 'phantom_assassin',
 
     phantumlancer: 'phantom_lancer',
+    phantomlancer: 'phantom_lancer',
     pl: 'phantom_lancer',
 
     phoenix: 'phoenix',
@@ -318,10 +351,12 @@ export const HERO_ALIASES = {
 
     queenofpain: 'queen_of_pain',
     qop: 'queen_of_pain',
+    akasha: 'queen_of_pain',
 
     razor: 'razor',
 
     riki: 'riki',
+    rikimaru: 'riki',
 
     rubick: 'rubick',
 
@@ -333,6 +368,7 @@ export const HERO_ALIASES = {
 
     shadowfiend: 'shadow_fiend',
     sf: 'shadow_fiend',
+    nevermore: 'shadow_fiend',
 
     shadowshaman: 'shadow_shaman',
     shaman: 'shadow_shaman',
@@ -349,11 +385,13 @@ export const HERO_ALIASES = {
     snapfire: 'snapfire',
 
     sniper: 'sniper',
+    kardel: 'sniper',
 
     spectre: 'spectre',
 
     spiritbreaker: 'spirit_breaker',
     sb: 'spirit_breaker',
+    bara: 'spirit_breaker',
 
     storm: 'storm',
     storm_spirit: 'storm',
@@ -370,6 +408,7 @@ export const HERO_ALIASES = {
 
     tidehunter: 'tidehunter',
     tide: 'tidehunter',
+    leviathan: 'tidehunter',
 
     timbersaw: 'timber',
     timber: 'timber',
@@ -387,10 +426,12 @@ export const HERO_ALIASES = {
     tusk: 'tusk',
 
     underlord: 'underlord',
+    pitlord: 'underlord',
 
     undying: 'undying',
 
     ursa: 'ursa',
+    ulfsaar: 'ursa',
 
     vengeful: 'vengeful',
     vs: 'vengeful',
