@@ -1,19 +1,20 @@
 import { createCanvas, loadImage } from 'canvas';
 
 export async function generateItemRow(itemImages) {
-    const size = 62; // item icon size
+    const width = 64;   // wider
+    const height = 48;  // shorter
     const gap = 6;
 
     const canvas = createCanvas(
-        itemImages.length * (size + gap),
-        size
+        itemImages.length * (width + gap),
+        height
     );
 
     const ctx = canvas.getContext('2d');
 
     for (let i = 0; i < itemImages.length; i++) {
         const img = await loadImage(itemImages[i]);
-        ctx.drawImage(img, i * (size + gap), 0, size, size);
+        ctx.drawImage(img, i * (width + gap), 0, width, height);
     }
 
     return canvas.toBuffer();
