@@ -1,8 +1,8 @@
 import { createCanvas, loadImage } from 'canvas';
 
 export async function generateItemRow(itemImages) {
-    const width = 66;   // wider
-    const height = 48;  // shorter
+    const width = 88;   // wider
+    const height = 64;  // shorter
     const gap = 6;
 
     const canvas = createCanvas(
