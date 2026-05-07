@@ -5,7 +5,9 @@ import { Client, GatewayIntentBits, EmbedBuilder } from 'discord.js';
 import {
     getAccountIdByAlias, getDailyHeroWin, getMatchesForDailyHeroWin,
     removeAlias, saveAliases, resolveHero,
-    getItemImage, getItems, getItem
+    getItemImage, getItems, getItem,
+    getHeroStats,
+    formatStreak
 } from './utils.js'
 import { generateItemRow } from './canvas.js'
 
@@ -151,8 +153,8 @@ client.on('messageCreate', async (message) => {
                     { name: 'Result', value: result, inline: true },
                     { name: 'Duration', value: formattedDuration, inline: true },
 
-                    { name: 'GPM', value: `${lastMatch.gold_per_min}`, inline: true },
-                    { name: 'XPM', value: `${lastMatch.xp_per_min}`, inline: true },
+                    { name: 'GPM', value: `${gpm}`, inline: true },
+                    { name: 'XPM', value: `${xpm}`, inline: true },
                     { name: '\u200B', value: '\u200B', inline: true },
 
                     { name: 'Played', value: `${startTime.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB (${timeAgo})` }
@@ -264,6 +266,88 @@ client.on('messageCreate', async (message) => {
             '📋 **Registered Aliases**',
             aliasList
         ].join('\n'));
+    }
+    if (message.content.startsWith('wr')) {
+        const args = message.content.split(' ');
+
+        const command = args[0]; // e.g. wrjug
+        const heroAlias = command.replace('wr', '');
+
+        if (!heroAlias) {
+            return message.reply('Usage: wr[hero] [alias/account_id]');
+        }
+
+        if (!args[1]) {
+            return message.reply('Usage: wr[hero] [alias/account_id]');
+        }
+
+        let accountId = args[1];
+
+        // resolve alias → account_id
+        const { data: aliasData } = await supabase
+            .from('aliases')
+            .select('account_id')
+            .eq('alias', accountId.toLowerCase())
+            .single();
+
+        if (aliasData) {
+            accountId = aliasData.account_id;
+        }
+
+        // resolve hero
+        const hero = resolveHero(heroAlias);
+
+        if (!hero) {
+            return message.reply(`Unknown hero: ${heroAlias}`);
+        }
+
+        const stats = await getHeroStats(accountId, hero.id);
+
+        if (!stats) {
+            return message.reply('No matches found.');
+        }
+        const streakType = stats.currentStreak.charAt(0);
+        const streakCount = stats.currentStreak.slice(1);
+
+        const embed = new EmbedBuilder()
+            .setTitle(`📊 ${hero.name} Stats`)
+            .addFields(
+                {
+                    name: 'Player',
+                    value: stats.playerName,
+                    inline: true
+                },
+                {
+                    name: 'Matches',
+                    value: `${stats.matches}`,
+                    inline: true
+                },
+                {
+                    name: 'Winrate',
+                    value: `${stats.winrate}%`,
+                    inline: true
+                },
+                {
+                    name: 'Best Win Streak',
+                    value: formatStreak('W', stats.bestWinStreak),
+                    inline: true
+                },
+                {
+                    name: 'Best Lose Streak',
+                    value: formatStreak('L', stats.bestLoseStreak),
+                    inline: true
+                },
+                {
+                    name: 'Current Streak',
+                    value: formatStreak(streakType, streakCount),
+                    inline: true
+                }
+            )
+            .setColor(0x5865F2);
+
+        return message.reply({
+            embeds: [embed]
+        });
     }
 });
 
