@@ -186,7 +186,7 @@ export function getDailyHeroWin(matches, heroname) {
 
 export async function getHeroStats(accountId, heroId) {
   const response = await fetch(
-    `https://api.opendota.com/api/players/${accountId}/matches?hero_id=${heroId}&limit=500`
+    `https://api.opendota.com/api/players/${accountId}/matches?hero_id=${heroId}&limit=1000`
   );
   const profileRes = await axios.get(
     `https://api.opendota.com/api/players/${accountId}`
