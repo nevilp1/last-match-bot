@@ -31,3 +31,8 @@ Example `.gitignore`:
 
 ```bash
 .env
+```
+
+## To-be Improved
+- Group aliases for each discord server
+- Error handling for daily[hero] command (e.g 522 error code case)
