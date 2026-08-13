@@ -1,6 +1,7 @@
 import { HEROES, HERO_ALIASES } from './heroes.js';
 import axios from 'axios';
 import { pool } from './connection.js';
+import path from 'path';
 
 let itemsCache = null;
 
@@ -19,15 +20,15 @@ export function getItem(itemId, itemsData) {
   return item || null;
 }
 
-// In utils.js
+
 export function getItemImage(item) {
   if (!item || !item.img) return null; 
 
-  // 1. Extract just the filename (e.g., "lotus_orb.png" from "/apps/dota2/images/.../lotus_orb.png?t=123")
+  // Extract just the filename (e.g., "lotus_orb.png")
   const fileName = item.img.split('/').pop().split('?')[0];
   
-  // 2. Use the Stratz CDN
-  return `https://cdn.stratz.com/images/dota2/items/${fileName}`;
+  // Return the absolute local path to your assets folder
+  return path.join(process.cwd(), 'assets', 'items', fileName);
 }
 
 export function resolveHero(input) {
