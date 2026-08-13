@@ -27,7 +27,7 @@ const client = new Client({
 });
 
 // Set a prefix to prevent the bot from evaluating normal conversations
-const PREFIX = '!'; 
+const PREFIX = ''; 
 
 client.once('clientReady', () => {
     console.log(`Logged in as ${client.user.tag}`);

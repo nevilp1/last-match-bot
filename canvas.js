@@ -11,9 +11,8 @@ export async function generateItemRow(itemPaths) {
     const canvas = createCanvas(itemPaths.length * (width + gap), height);
     const ctx = canvas.getContext('2d');
 
-    // 1. Load all local images concurrently from the hard drive
+    // Load all local images concurrently from the hard drive
     const loadedImages = await Promise.all(itemPaths.map(async (imagePath) => {
-        // Double-check the file actually exists before trying to load it
         if (imagePath && fs.existsSync(imagePath)) {
             try {
                 return await loadImage(imagePath);
@@ -25,26 +24,26 @@ export async function generateItemRow(itemPaths) {
         return null;
     }));
 
-    // 2. Draw the loaded images
+    // Draw the row
     for (let i = 0; i < loadedImages.length; i++) {
         const x = i * (width + gap);
         const img = loadedImages[i];
 
+        // 1. ALWAYS draw the empty dark grey slot base first
+        ctx.fillStyle = '#1c242d';
+        ctx.fillRect(x, 0, width, height);
+
+        ctx.strokeStyle = '#323c48';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, 0, width, height);
+
+        // 2. Draw the item image if we successfully loaded it
         if (img) {
-            // Successfully loaded from disk!
             ctx.drawImage(img, x, 0, width, height);
-        } else {
-            // --- FALLBACK DRAWING (If file is missing or corrupted) ---
-            // Fill background (dark grey empty slot)
-            ctx.fillStyle = '#1c242d';
-            ctx.fillRect(x, 0, width, height);
-
-            // Add border
-            ctx.strokeStyle = '#323c48';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x, 0, width, height);
-
-            // Draw a question mark
+        } 
+        // 3. ONLY draw the '?' if there WAS an item path, but the image failed to load.
+        // If itemPaths[i] is null (meaning the player has no item here), it skips this and leaves the clean grey box!
+        else if (itemPaths[i]) {
             ctx.fillStyle = '#6c7a89';
             ctx.font = 'bold 18px sans-serif';
             ctx.textAlign = 'center';
