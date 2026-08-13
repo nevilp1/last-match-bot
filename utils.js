@@ -1,6 +1,6 @@
 import { HEROES, HERO_ALIASES } from './heroes.js';
 import axios from 'axios';
-import { supabase } from './connection.js'
+import { pool } from './connection.js';
 
 let itemsCache = null;
 
@@ -19,68 +19,92 @@ export function getItem(itemId, itemsData) {
   return item || null;
 }
 
+// In utils.js
 export function getItemImage(item) {
-  return item ? `https://cdn.cloudflare.steamstatic.com${item.img}` : null;
+  if (!item || !item.img) return null; 
+
+  // 1. Extract just the filename (e.g., "lotus_orb.png" from "/apps/dota2/images/.../lotus_orb.png?t=123")
+  const fileName = item.img.split('/').pop().split('?')[0];
+  
+  // 2. Use the Stratz CDN
+  return `https://cdn.stratz.com/images/dota2/items/${fileName}`;
 }
 
 export function resolveHero(input) {
   const key = input.toLowerCase();
-
   const heroKey = HERO_ALIASES[key] || key;
-
   return HEROES[heroKey];
 }
 
-export async function loadAliases(accountId) {
-  const { data } = await supabase
-    .from('aliases')
-    .select('alias')
-    .eq('account_id', accountId)
-    .single();
+// ---------------------------------------------------------
+// DATABASE OPERATIONS
+// ---------------------------------------------------------
 
-  return data?.alias;
+export async function loadAliases(accountId) {
+  try {
+    const { rows } = await pool.query(
+      'SELECT alias FROM aliases WHERE account_id = $1 LIMIT 1',
+      [accountId]
+    );
+    return rows.length > 0 ? rows[0].alias : null;
+  } catch (error) {
+    console.error('Error loading aliases:', error);
+    return null;
+  }
 }
 
 export async function saveAliases(discordId, accountId, alias) {
-  const { data, error } = await supabase
-    .from('aliases')
-    .upsert(
-      [{
-        discord_id: discordId,
-        account_id: accountId,
-        alias: alias.toLowerCase()
-      }],
-      {
-        onConflict: 'alias'
-      }
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO aliases (discord_id, account_id, alias) 
+       VALUES ($1, $2, $3) 
+       ON CONFLICT (alias) 
+       DO UPDATE SET discord_id = EXCLUDED.discord_id, account_id = EXCLUDED.account_id 
+       RETURNING *`,
+      [discordId, accountId, alias.toLowerCase()]
     );
-
-  if (error) console.error(error);
-  return data;
+    return rows;
+  } catch (error) {
+    console.error('Error saving alias:', error);
+    return null;
+  }
 }
 
 export async function getAccountIdByAlias(alias) {
-  const { data } = await supabase
-    .from('aliases')
-    .select('account_id')
-    .eq('alias', alias)
-    .single();
-
-  return data?.account_id;
+  try {
+    const { rows } = await pool.query(
+      'SELECT account_id FROM aliases WHERE alias = $1 LIMIT 1',
+      [alias]
+    );
+    return rows.length > 0 ? rows[0].account_id : null;
+  } catch (error) {
+    console.error('Error getting account ID:', error);
+    return null;
+  }
 }
+
 export async function removeAlias(alias) {
-  const { error } = await supabase
-    .from('aliases')
-    .delete()
-    .eq('alias', alias.toLowerCase());
-
-  return error;
+  try {
+    await pool.query(
+      'DELETE FROM aliases WHERE alias = $1',
+      [alias.toLowerCase()]
+    );
+    return null;
+  } catch (error) {
+    console.error('Error removing alias:', error);
+    return error; 
+  }
 }
+
+// ---------------------------------------------------------
+// MATCH & STATS OPERATIONS
+// ---------------------------------------------------------
 
 export async function getMatchesForDailyHeroWin(accountId, heroId) {
   try {
     const response = await axios.get(
-      `https://api.opendota.com/api/players/${accountId}/recentMatches`
+      `https://api.opendota.com/api/players/${accountId}/recentMatches`,
+      { timeout: 15000 }
     );
 
     const matches = response.data;
@@ -148,14 +172,13 @@ export function getDailyHeroWin(matches, heroname) {
   const result = [];
 
   const now = new Date(Date.now() + WIB_OFFSET);
-  const today = now.getUTCDay(); // ✅ use UTC version
+  const today = now.getUTCDay();
   const mondayIndex = today === 0 ? 6 : today - 1;
 
   const startOfWeek = new Date(now);
   startOfWeek.setUTCDate(now.getUTCDate() - mondayIndex);
   startOfWeek.setUTCHours(0, 0, 0, 0);
 
-  // Precompute winning days (WIB adjusted)
   const winDays = new Set(
     matches.map(match => {
       const d = new Date(match.start_time * 1000 + WIB_OFFSET);
@@ -185,77 +208,82 @@ export function getDailyHeroWin(matches, heroname) {
 }
 
 export async function getHeroStats(accountId, heroId) {
-  const response = await fetch(
-    `https://api.opendota.com/api/players/${accountId}/matches?hero_id=${heroId}&limit=1000`
-  );
-  const profileRes = await axios.get(
-    `https://api.opendota.com/api/players/${accountId}`
-  );
+  try {
+    const response = await axios.get(
+      `https://api.opendota.com/api/players/${accountId}/matches?hero_id=${heroId}&limit=1000`,
+      { timeout: 15000 }
+    );
+    const profileRes = await axios.get(
+      `https://api.opendota.com/api/players/${accountId}`,
+      { timeout: 15000 }
+    );
 
-  const playerName =
-    profileRes.data.profile?.personaname || 'Unknown Player';
+    const playerName = profileRes.data.profile?.personaname || 'Unknown Player';
+    const matches = response.data; // Fixed: Use response.data instead of await response.json()
 
-  const matches = await response.json();
+    if (!matches || !matches.length) {
+      return null;
+    }
 
-  if (!matches.length) {
+    let wins = 0;
+
+    // streak tracking
+    let currentType = null;
+    let currentCount = 0;
+
+    let bestWin = 0;
+    let bestLose = 0;
+
+    let activeType = null;
+    let activeCount = 0;
+
+    matches.forEach((match, index) => {
+      const isRadiant = match.player_slot < 128;
+      const win =
+        (isRadiant && match.radiant_win) ||
+        (!isRadiant && !match.radiant_win);
+
+      if (win) wins++;
+
+      const result = win ? "W" : "L";
+
+      // current streak
+      if (index === 0) {
+        currentType = result;
+        currentCount = 1;
+      } else if (result === currentType && currentCount === index) {
+        currentCount++;
+      }
+
+      // best streaks
+      if (result === activeType) {
+        activeCount++;
+      } else {
+        activeType = result;
+        activeCount = 1;
+      }
+
+      if (result === "W") {
+        bestWin = Math.max(bestWin, activeCount);
+      } else {
+        bestLose = Math.max(bestLose, activeCount);
+      }
+    });
+
+    return {
+      playerName: playerName,
+      matches: matches.length,
+      wins,
+      losses: matches.length - wins,
+      winrate: ((wins / matches.length) * 100).toFixed(2),
+      currentStreak: `${currentType}${currentCount}`,
+      bestWinStreak: bestWin,
+      bestLoseStreak: bestLose,
+    };
+  } catch (error) {
+    console.error('Error in getHeroStats:', error.message);
     return null;
   }
-
-  let wins = 0;
-
-  // streak tracking
-  let currentType = null;
-  let currentCount = 0;
-
-  let bestWin = 0;
-  let bestLose = 0;
-
-  let activeType = null;
-  let activeCount = 0;
-
-  matches.forEach((match, index) => {
-    const isRadiant = match.player_slot < 128;
-    const win =
-      (isRadiant && match.radiant_win) ||
-      (!isRadiant && !match.radiant_win);
-
-    if (win) wins++;
-
-    const result = win ? "W" : "L";
-
-    // current streak
-    if (index === 0) {
-      currentType = result;
-      currentCount = 1;
-    } else if (result === currentType && currentCount === index) {
-      currentCount++;
-    }
-
-    // best streaks
-    if (result === activeType) {
-      activeCount++;
-    } else {
-      activeType = result;
-      activeCount = 1;
-    }
-
-    if (result === "W") {
-      bestWin = Math.max(bestWin, activeCount);
-    } else {
-      bestLose = Math.max(bestLose, activeCount);
-    }
-  });
-
-  return {
-    playerName: playerName,
-    matches: matches.length,
-    wins,
-    losses: matches.length - wins,
-    winrate: ((wins / matches.length) * 100).toFixed(2),
-    currentStreak: `${currentType}${currentCount}`,
-    bestWinStreak: bestWin,
-    bestLoseStreak: bestLose,
-  };
 }
 
 export function formatStreak(type, count) {

@@ -1,6 +1,22 @@
+import dns from 'node:dns';
+import { setGlobalDispatcher, Agent } from 'undici';
+
+// Force IPv4 resolution
+dns.setDefaultResultOrder('ipv4first');
+
+// Extend default timeout from 10s to 30s for native fetch
+setGlobalDispatcher(new Agent({
+  connect: {
+    timeout: 30000
+  }
+}));
+
+import 'dotenv/config';
+// ... rest of your index.js code
+
 import 'dotenv/config';
 import axios from 'axios';
-import { supabase } from './connection.js'
+import { pool } from './connection.js';
 import { Client, GatewayIntentBits, EmbedBuilder } from 'discord.js';
 import {
     getAccountIdByAlias, getDailyHeroWin, getMatchesForDailyHeroWin,
@@ -8,9 +24,8 @@ import {
     getItemImage, getItems, getItem,
     getHeroStats,
     formatStreak
-} from './utils.js'
-import { generateItemRow } from './canvas.js'
-
+} from './utils.js';
+import { generateItemRow } from './canvas.js';
 
 const client = new Client({
     intents: [
@@ -27,6 +42,7 @@ client.once('clientReady', () => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
+    // --- REGISTER ALIAS ---
     if (message.content.startsWith('register')) {
         const args = message.content.split(' ');
         const alias = args[1];
@@ -37,9 +53,10 @@ client.on('messageCreate', async (message) => {
         }
 
         await saveAliases(message.author.id, accountId, alias);
-
         return message.reply(`Registered **${alias}** → ${accountId}`);
     }
+
+    // --- REMOVE ALIAS ---
     if (message.content.startsWith('remove')) {
         const args = message.content.split(' ');
         const alias = args[1];
@@ -57,6 +74,8 @@ client.on('messageCreate', async (message) => {
 
         return message.reply(`Removed alias **${alias}**`);
     }
+
+    // --- LAST MATCH INFO ---
     if (message.content.startsWith('lastmatch')) {
         const args = message.content.split(' ');
         const input = args[1];
@@ -67,33 +86,38 @@ client.on('messageCreate', async (message) => {
         if (aliasLookup) accountId = aliasLookup;
 
         if (!accountId) {
-            return message.reply('Usage: lastmatch <account_id>');
+            return message.reply('Usage: lastmatch <alias/account_id>');
         }
 
         try {
             const profileRes = await axios.get(
-                `https://api.opendota.com/api/players/${accountId}`
+                `https://api.opendota.com/api/players/${accountId}`,
+                { timeout: 15000 }
             );
 
-            const playerName =
-                profileRes.data.profile?.personaname || 'Unknown Player';
+            const playerName = profileRes.data.profile?.personaname || 'Unknown Player';
+
             // Fetch recent match
             const matchRes = await axios.get(
-                `https://api.opendota.com/api/players/${accountId}/recentMatches`
+                `https://api.opendota.com/api/players/${accountId}/recentMatches`,
+                { timeout: 15000 }
             );
 
             const lastMatch = matchRes.data[0];
             if (!lastMatch) return message.reply('No recent match found.');
+
+            // Fixed: Removed the trailing period '.' in the URL
             const detailRes = await axios.get(
-                `https://api.opendota.com/api/matches/${lastMatch.match_id}.`
+                `https://api.opendota.com/api/matches/${lastMatch.match_id}`,
+                { timeout: 15000 }
             );
 
             const detailMatch = detailRes.data.players.find(p => Number(p.account_id) === Number(accountId));
 
-
             // Fetch hero list
             const heroesRes = await axios.get(
-                'https://api.opendota.com/api/heroes'
+                'https://api.opendota.com/api/heroes',
+                { timeout: 15000 }
             );
 
             const hero = heroesRes.data.find(h => h.id === lastMatch.hero_id);
@@ -120,13 +144,14 @@ client.on('messageCreate', async (message) => {
             if (days > 0) timeAgo += `${days}d `;
             if (hours > 0) timeAgo += `${hours}h `;
             timeAgo += `${minutes}m ago`;
+
             const durationMinutes = Math.floor(lastMatch.duration / 60);
             const durationSeconds = lastMatch.duration % 60;
             const formattedDuration = `${durationMinutes}:${durationSeconds
                 .toString()
                 .padStart(2, '0')}`;
 
-            // try embed message
+            // Item Canvas
             const itemIds = [
                 detailMatch.item_0,
                 detailMatch.item_1,
@@ -138,7 +163,9 @@ client.on('messageCreate', async (message) => {
 
             const itemsData = await getItems();
             const items = itemIds.map(id => getItem(id, itemsData));
-            const itemImages = items.map(item => getItemImage(item)).filter(Boolean);
+
+            // Do NOT filter out Boolean here so array maintains length of 6 slots!
+            const itemImages = items.map(item => getItemImage(item));
 
             const buffer = await generateItemRow(itemImages);
 
@@ -160,7 +187,7 @@ client.on('messageCreate', async (message) => {
                     { name: 'Played', value: `${startTime.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB (${timeAgo})` }
                 )
                 .setColor(result.includes('Win') ? 0x00ff00 : 0xff0000)
-                .setImage('attachment://items.png'); // 👈 IMPORTANT
+                .setImage('attachment://items.png');
 
             await message.reply({
                 embeds: [embed],
@@ -174,10 +201,12 @@ client.on('messageCreate', async (message) => {
             if (error.response?.status === 404) {
                 return message.reply('Steam ID not found.');
             }
-            console.log(error);
+            console.error(error);
             return message.reply('Failed to fetch match info.');
         }
     }
+
+    // --- HELP COMMAND ---
     if (message.content === 'helpdota') {
         return message.reply([
             '📖 **Bot Commands**',
@@ -199,104 +228,84 @@ client.on('messageCreate', async (message) => {
             'Show all registered aliases'
         ].join('\n'));
     }
+
+    // --- DAILY HERO WIN ---
     if (message.content.startsWith('daily')) {
         const args = message.content.split(' ');
-
         const command = args[0]; // e.g. dailyta
         const heroAlias = command.replace('daily', '');
 
-        if (!heroAlias) {
-            return message.reply('Usage: daily[hero] [alias/account_id]');
-        }
-
-        if (!args[1]) {
+        if (!heroAlias || !args[1]) {
             return message.reply('Usage: daily[hero] [alias/account_id]');
         }
 
         let accountId = args[1];
 
-        // resolve alias → account_id
-        const { data: aliasData } = await supabase
-            .from('aliases')
-            .select('account_id')
-            .eq('alias', accountId)
-            .single();
+        // Clean helper reuse instead of direct pool query
+        const aliasLookup = await getAccountIdByAlias(accountId.toLowerCase());
+        if (aliasLookup) accountId = aliasLookup;
 
-        if (aliasData) {
-            accountId = aliasData.account_id;
-        }
-
-        // resolve hero
         const hero = resolveHero(heroAlias);
-
         if (!hero) {
             return message.reply(`Unknown hero: ${heroAlias}`);
         }
 
         const matches = await getMatchesForDailyHeroWin(accountId, hero.id);
-
         const tracker = getDailyHeroWin(matches, hero.name);
 
-        message.reply(tracker);
+        return message.reply(tracker);
     }
+
+    // --- ACCOUNT INFO ---
     if (message.content === 'account') {
         return message.reply([
             '🔐 **Account Info**',
-            // eslint-disable-next-line no-undef
             `ACCOUNT ID: ${process.env.ACCOUNT_ID}`,
-            // eslint-disable-next-line no-undef
             `PASSWORD: ${process.env.ACCOUNT_PASSWORD}`
         ].join('\n'));
     }
+
+    // --- LIST ALIASES ---
     if (message.content === 'listaliases') {
-        const { data, error } = await supabase
-            .from('aliases')
-            .select('alias, account_id')
-            .order('alias', { ascending: true });
+        try {
+            const result = await pool.query('SELECT alias, account_id FROM aliases ORDER BY alias ASC');
+            
+            if (result.rows.length === 0) {
+                return message.reply('No aliases registered.');
+            }
 
-        if (error || !data.length) {
-            return message.reply('No aliases registered.');
+            const aliasList = result.rows
+                .map(row => `${row.alias} → ${row.account_id}`)
+                .join('\n');
+
+            return message.reply([
+                '📋 **Registered Aliases**',
+                aliasList
+            ].join('\n'));
+
+        } catch (err) {
+            console.error("Failed to fetch aliases:", err);
+            return message.reply('Failed to retrieve aliases from database.');
         }
-
-        const aliasList = data
-            .map(row => `${row.alias} → ${row.account_id}`)
-            .join('\n');
-
-        return message.reply([
-            '📋 **Registered Aliases**',
-            aliasList
-        ].join('\n'));
     }
+
+    // --- WINRATE & HERO STATS ---
     if (message.content.startsWith('wr')) {
         const args = message.content.split(' ');
-
         const command = args[0]; // e.g. wrjug
         const heroAlias = command.replace('wr', '');
 
-        if (!heroAlias) {
-            return message.reply('Usage: wr[hero] [alias/account_id]');
-        }
-
-        if (!args[1]) {
+        if (!heroAlias || !args[1]) {
             return message.reply('Usage: wr[hero] [alias/account_id]');
         }
 
         let accountId = args[1];
 
-        // resolve alias → account_id
-        const { data: aliasData } = await supabase
-            .from('aliases')
-            .select('account_id')
-            .eq('alias', accountId.toLowerCase())
-            .single();
+        // Clean helper reuse instead of direct pool query
+        const aliasLookup = await getAccountIdByAlias(accountId.toLowerCase());
+        if (aliasLookup) accountId = aliasLookup;
 
-        if (aliasData) {
-            accountId = aliasData.account_id;
-        }
-
-        // resolve hero
         const hero = resolveHero(heroAlias);
-
         if (!hero) {
             return message.reply(`Unknown hero: ${heroAlias}`);
         }
@@ -306,50 +315,24 @@ client.on('messageCreate', async (message) => {
         if (!stats) {
             return message.reply('No matches found.');
         }
+
         const streakType = stats.currentStreak.charAt(0);
         const streakCount = stats.currentStreak.slice(1);
 
         const embed = new EmbedBuilder()
             .setTitle(`📊 ${hero.name} Stats`)
             .addFields(
-                {
-                    name: 'Player',
-                    value: stats.playerName,
-                    inline: true
-                },
-                {
-                    name: 'Matches',
-                    value: `${stats.matches}`,
-                    inline: true
-                },
-                {
-                    name: 'Winrate',
-                    value: `${stats.winrate}%`,
-                    inline: true
-                },
-                {
-                    name: 'Best Win Streak',
-                    value: formatStreak('W', stats.bestWinStreak),
-                    inline: true
-                },
-                {
-                    name: 'Best Lose Streak',
-                    value: formatStreak('L', stats.bestLoseStreak),
-                    inline: true
-                },
-                {
-                    name: 'Current Streak',
-                    value: formatStreak(streakType, streakCount),
-                    inline: true
-                }
+                { name: 'Player', value: stats.playerName, inline: true },
+                { name: 'Matches', value: `${stats.matches}`, inline: true },
+                { name: 'Winrate', value: `${stats.winrate}%`, inline: true },
+                { name: 'Best Win Streak', value: formatStreak('W', stats.bestWinStreak), inline: true },
+                { name: 'Best Lose Streak', value: formatStreak('L', stats.bestLoseStreak), inline: true },
+                { name: 'Current Streak', value: formatStreak(streakType, streakCount), inline: true }
             )
             .setColor(0x5865F2);
 
-        return message.reply({
-            embeds: [embed]
-        });
+        return message.reply({ embeds: [embed] });
     }
 });
 
-// eslint-disable-next-line no-undef
-client.login(process.env.TOKEN);
+client.login(process.env.DISCORD_TOKEN);
