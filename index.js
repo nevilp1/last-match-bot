@@ -228,4 +228,9 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.TOKEN).catch((error) => {
+    console.error("Failed to login to Discord. Network might be down.", error);
+    // process.exit(1) tells the app to crash with an error code.
+    // PM2 will detect this crash and automatically restart the bot!
+    process.exit(1); 
+});
